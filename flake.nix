@@ -1,28 +1,58 @@
 {
-  description = "Custom NixOS Installer ISO with Calamares";
-
+  description = "Nixbook (and Lite) installation media";
+  
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
-    flake-utils.url = "github:numtide/flake-utils";
+    nixos-hardware.url = "github:nixos/nixos-hardware";
   };
+    
+  outputs = { self, nixpkgs, nixos-hardware }: {
+    nixosConfigurations = {
+      nixbook = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ({ pkgs, lib, modulesPath, ... }: {
+            imports = [ (modulesPath + "/installer/cd-dvd/installation-cd-graphical-calamares-gnome.nix") ];
+            # Start of configuration of ISO
+            boot.kernelPackages = pkgs.linuxPackages_latest;
+            boot.supportedFilesystems = lib.mkForce [ "btrfs" "reiserfs" "vfat" "f2fs" "xfs" "ntfs" "cifs" ];
+            environment.systemPackages = with pkgs; [ nano ];
+            services.flatpak.enable = true;
+            networking = {
+              hostName = "nixbook";
+              networkmanager.enable = true;
+            };
+            services.openssh.enable = true;
+            system.stateVersion = "25.05";
+          })
+        ];
+      };
+      
+      nixbook-lite = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ({ pkgs, lib, modulesPath, ... }: {
+            imports = [ (modulesPath + "/installer/cd-dvd/installation-cd-graphical-calamares-gnome.nix") ];
+            # Start of configuration of ISO
+            boot.kernelPackages = pkgs.linuxPackages_latest;
+            boot.supportedFilesystems = lib.mkForce [ "btrfs" "reiserfs" "vfat" "f2fs" "xfs" "ntfs" "cifs" ];
+            environment.systemPackages = with pkgs; [ nano ];
+            services.flatpak.enable = true;
+            networking = {
+              hostName = "nixbook-lite";
+              networkmanager.enable = true;
+            };
+            services.openssh.enable = true;
+            system.stateVersion = "25.05";
+          })
+        ];
+      };
+ 
+    };
+    
+    # Systems to build with `nix build`
+    packages."x86_64-linux".default = self.nixosConfigurations.nixbook.config.system.build.isoImage;
+    packages."x86_64-linux".lite = self.nixosConfigurations.nixbook-lite.config.system.build.isoImage;
 
-  outputs = { self, nixpkgs, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        nixosConfiguration = nixpkgs.lib.nixosSystem {
-          system = system;
-          modules = [
-            "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares-gnome.nix"
-
-            {
-              nixpkgs.config.allowUnfree = true;
-              isoImage.isoName = "nixos-custom-installer.iso";
-              system.stateVersion = "25.05";
-            }
-          ];
-        };
-      in {
-        packages.install-iso = nixosConfiguration.config.system.build.isoImage;
-      });
+  };
 }
-

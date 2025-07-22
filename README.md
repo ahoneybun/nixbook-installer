@@ -4,3 +4,10 @@
 2. cd into the folder
 3. Run ```nix build .#packages.x86_64-linux.install-iso --extra-experimental-features flakes --extra-experimental-features nix-command```
 4. The ISO file will be in ```/result/iso/```
+
+### With Flakes enabled
+
+```bash
+nix build .#default # Nixbook ISO
+nix build .#lite    # Nixbook Lite ISO
+```
